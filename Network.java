@@ -54,8 +54,6 @@ public class Network {//maybe wants some way to link multiple neurons together? 
 
         sortNeurons();
 
-        Display d = new Display(this);
-
         runBatch();
     }
 
