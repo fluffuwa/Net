@@ -19,6 +19,7 @@ import android.widget.LinearLayout;
 public class NetworkDisplay extends AppCompatActivity {
     int fontSize = 12;
 
+    private LinearLayout layout;
     public static final Point screenSize = new Point();
     private Vibrator vibrate;
     private View v;
@@ -53,7 +54,7 @@ public class NetworkDisplay extends AppCompatActivity {
         CoordinatorLayout mainLayout = findViewById(R.id.mainlayout);
 
 
-        LinearLayout layout = findViewById(R.id.layout);
+        layout = findViewById(R.id.layout);
         v = new View(getBaseContext()) {
             final Rect rect720p = new Rect(0, 0, 720, 1280);
             final Rect thisRes = new Rect(0, 0, screenSize.x, screenSize.y);
@@ -75,28 +76,19 @@ public class NetworkDisplay extends AppCompatActivity {
 //
         //CoordinatorLayout.LayoutParams lparams = (CoordinatorLayout.LayoutParams) layout.getLayoutParams();
 
-
-        Button b = new Button(getBaseContext());
-        b.setText("button1");
-        b.setOnClickListener(new View.OnClickListener() {
+        addButton("button1", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 System.out.println("boop");
             }
         });
-        //b.setLayoutParams (lparams);
-        layout.addView(b);
 
-        Button d = new Button(getBaseContext());
-        d.setText("button2");
-        d.setOnClickListener(new View.OnClickListener() {
+        addButton("button2", new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 System.out.println("doop");
             }
         });
-        //d.setLayoutParams (lparams);
-        layout.addView(d);
 
 
         (new Thread() {
@@ -127,6 +119,13 @@ public class NetworkDisplay extends AppCompatActivity {
         //                .setAction("Action", null).show();
         //    }
         //});
+    }
+
+    public void addButton(String text, View.OnClickListener action) {
+        Button b = new Button(getBaseContext());
+        b.setText(text);
+        b.setOnClickListener(action);
+        layout.addView(b);
     }
 
     public static Paint textPaint;
