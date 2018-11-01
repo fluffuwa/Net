@@ -7,18 +7,46 @@ import java.util.Collections;
 public class Network {//maybe wants some way to link multiple neurons together? for convolutional layers y'know
 
 
-    int testCase = 12;
-    int[] hiddenLayerSizes = {5, 8, 2};
+    int testCase = QA.maxQA;
+    int[] hiddenLayerSizes = {5, 2};
 
     int batchSize = 1000;
 
-    int maxErrorRecording = 1000;
+    int maxErrorRecording = NetworkDisplay.maxErrorRecording;
 
-    double lr = 0.01;
+    double lr = 0.05;
 
     public Network() {
 
         setQAArray();
+
+        setNetworkForQA();
+
+        //runBatch();
+    }
+
+    int batchesRun = 0;
+
+    ArrayList<Neuron> neurons = new ArrayList<Neuron>();
+
+    ArrayList<Neuron> inputs = new ArrayList<Neuron>();
+    ArrayList<Neuron> outputs = new ArrayList<Neuron>();
+
+    ArrayList<Double> errors = new ArrayList<>();
+    ArrayList<QA> QAArray = new ArrayList<>();
+
+    public void setQAArray() {
+        ArrayList<QA> tempQAArray = new ArrayList<>();
+        for (int x = 0; x < batchSize; x++)
+            tempQAArray.add(new QA(testCase));
+        QAArray = tempQAArray;
+    }
+
+
+    public void setNetworkForQA() {
+        neurons = new ArrayList<>();
+        inputs = new ArrayList<>();
+        outputs = new ArrayList<>();
 
         for (int x = 0; x < QAArray.get(0).realInputs.length; x++)
             addInput();
@@ -32,11 +60,6 @@ public class Network {//maybe wants some way to link multiple neurons together? 
         for (int x = 0; x < QAArray.get(0).realOutputs.length; x++)
             addOutput(sigmoidOrLinear[x] ? Neuron.FunctionType.SIGMOID : Neuron.FunctionType.LINEAR);
 
-        //for (int x = 0; x < 2; x ++){
-        //    Neuron n = addHidden ();
-        //    connect (inputs, n);
-        //    connect (n, outputs);
-        //}
         ArrayList<Neuron> prevLayer = inputs;
         for (int x = 0; x < hiddenLayerSizes.length; x++) {
             ArrayList<Neuron> thisLayer = new ArrayList<Neuron>();
@@ -47,38 +70,29 @@ public class Network {//maybe wants some way to link multiple neurons together? 
         }
         connect(prevLayer, outputs);
 
-        thisBatchPoints = new ArrayList<double[]>();
-        for (int x = 0; x < batchSize; x++) {
-            thisBatchPoints.add(new double[inputs.size() + outputs.size()]);
+        selectedNeuron = outputs.get(0);
+
+        thisBatchPoints = new ArrayList<>();
+
+        for (int count2 = 0; count2 < batchSize; count2++) {
+            double[] record = new double[inputs.size() + 1];
+            for (int x = 0; x < inputs.size(); x++) {
+                record[x] = QAArray.get(count2).realInputs[x];
+            }
+            record[inputs.size()] = selectedNeuron.value;
+            thisBatchPoints.add(record);
         }
 
         sortNeurons();
-
-        runBatch();
     }
 
-    int batchesRun = 0;
+    Neuron selectedNeuron;
 
-    ArrayList<Neuron> neurons = new ArrayList<Neuron>();
-
-    ArrayList<Neuron> inputs = new ArrayList<Neuron>();
-    ArrayList<Neuron> outputs = new ArrayList<Neuron>();
-
-    ArrayList<Double> errors = new ArrayList();
-    ArrayList<QA> QAArray = new ArrayList();
-
-    public void setQAArray() {
-        ArrayList tempQAArray = new ArrayList<>();
-        for (int x = 0; x < batchSize; x++) {
-            tempQAArray.add(new QA(testCase));
-        }
-        QAArray = tempQAArray;
-    }
-
-
+    //maybe also include mins and maxes for that batch of runs?.. in either case it flashes though I think
     public ArrayList<double[]> thisBatchPoints;//for plotting on the display
 
     public void runBatch() {
+        ArrayList<double[]> nextBatchPoints = new ArrayList<>();
         batchesRun++;
         double totalError = 0;
         Collections.shuffle(QAArray);//pretty much always good to shuffle it
@@ -87,25 +101,25 @@ public class Network {//maybe wants some way to link multiple neurons together? 
 
             double[] results = feedForward(test.realInputs);
 
-            double[] record = thisBatchPoints.get(count2);
+            double[] record = new double[inputs.size() + 1];
             for (int x = 0; x < inputs.size(); x++) {
                 record[x] = test.realInputs[x];
             }
-            for (int y = 0; y < results.length; y++) {
-                record[inputs.size() + y] = results[y];
-            }
+            record[inputs.size()] = selectedNeuron.value;
+            nextBatchPoints.add(record);
 
             totalError += (backprop(test.realOutputs));
         }
         if (errors.size() == maxErrorRecording)
             errors.remove(0);
         errors.add(totalError / batchSize);
+        thisBatchPoints = nextBatchPoints;
     }
 
 
-    public static void main(String[] args) {
-        Network n = new Network();
-    }
+    //public static void main(String[] args) {
+    //    Network n = new Network();
+    //}
 
     //returns output neuron values
     public double[] feedForward(double[] inputValues) {
@@ -188,7 +202,7 @@ public class Network {//maybe wants some way to link multiple neurons together? 
                 connect(neurons1.get(x), neurons2.get(y));
     }
 
-    private boolean displaySort = true;
+    private boolean displaySort = false;
 
     private void printList(ArrayList<Neuron> neurons) {
         if (displaySort) {
@@ -218,50 +232,54 @@ public class Network {//maybe wants some way to link multiple neurons together? 
     public void sortNeurons() {
         ///shrug
         //error if it goes cyclic
+        try {
+            boolean changed;
+            int count = 0;
 
-        boolean changed;
-        int count = 0;
+            //printList (neurons);
+            do {
+                changed = false;
+                count++;
 
-        //printList (neurons);
-        do {
-            changed = false;
-            count++;
+                ArrayList<Neuron> neuronsClone = (ArrayList<Neuron>) neurons.clone();
+                for (int n = 0; n < neuronsClone.size(); n++) {
+                    //push all inputs to left, all outputs to right
+                    Neuron center = neuronsClone.get(n);
 
-            ArrayList<Neuron> neuronsClone = (ArrayList<Neuron>) neurons.clone();
-            for (int n = 0; n < neuronsClone.size(); n++) {
-                //push all inputs to left, all outputs to right
-                Neuron center = neuronsClone.get(n);
-
-                ArrayList<Weight> inputsClone = (ArrayList<Weight>) center.inputs.clone();
-                for (int x = 0; x < inputsClone.size(); x++) {
-                    Weight w = inputsClone.get(x);
-                    int pos = getNeuronPos(center);
-                    if (getNeuronPos(w.n1) > pos) {
-                        neurons.remove(w.n1);
-                        neurons.add(pos, w.n1);
-                        changed = true;
-                        printList(neurons);
+                    ArrayList<Weight> inputsClone = (ArrayList<Weight>) center.inputs.clone();
+                    for (int x = 0; x < inputsClone.size(); x++) {
+                        Weight w = inputsClone.get(x);
+                        int pos = getNeuronPos(center);
+                        if (getNeuronPos(w.n1) > pos) {
+                            neurons.remove(w.n1);
+                            neurons.add(pos, w.n1);
+                            changed = true;
+                            printList(neurons);
+                        }
                     }
+
+                    ArrayList<Weight> outputsClone = (ArrayList<Weight>) center.outputs.clone();
+                    for (int x = 0; x < outputsClone.size(); x++) {
+                        Weight w = outputsClone.get(x);
+                        int pos = getNeuronPos(center);
+                        if (getNeuronPos(w.n2) < pos) {
+                            neurons.remove(w.n2);
+                            neurons.add(pos, w.n2);
+                            changed = true;
+                            printList(neurons);
+                        }
+                    }
+
                 }
 
-                ArrayList<Weight> outputsClone = (ArrayList<Weight>) center.outputs.clone();
-                for (int x = 0; x < outputsClone.size(); x++) {
-                    Weight w = outputsClone.get(x);
-                    int pos = getNeuronPos(center);
-                    if (getNeuronPos(w.n2) < pos) {
-                        neurons.remove(w.n2);
-                        neurons.add(pos, w.n2);
-                        changed = true;
-                        printList(neurons);
-                    }
-                }
+            } while (changed && count < neurons.size() + 1);
 
-            }
-
-        } while (changed && count < neurons.size() + 1);
-
-        if (count >= neurons.size() + 1)
-            System.out.println("not sorted");
+            if (count >= neurons.size() + 1)
+                System.out.println("not sorted");
+        } catch (Exception e) {
+            setQAArray();
+            setNetworkForQA();
+        }
     }
 
     public int getNeuronPos(Neuron n) {

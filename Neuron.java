@@ -53,9 +53,10 @@ public class Neuron {
         }
         derivative = derivative(value);
         for (int x = 0; x < inputs.size(); x++) {
-            inputs.get(x).backprop(lr);
+            //inputs.get(x).backprop(lr);
+            inputs.get(x).backprop(lr / (inputs.size() + 1));//multiply learning rate over inputs by the average range of the inputs?
         }
-        bias = bias - error * derivative * lr;
+        bias = bias - error * derivative * (lr / (inputs.size() + 1));//multiply learning rate over inputs by the average range of the inputs?
     }
 
     public double activation(double in) {

@@ -1,7 +1,6 @@
 package com.example.joeym.playground;
 
 import android.content.pm.ActivityInfo;
-import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -12,23 +11,23 @@ import android.os.Vibrator;
 import android.support.design.widget.CoordinatorLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Display;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-
 public class NetworkDisplay extends AppCompatActivity {
     //changeables
-    private int neuronRadius = 20;
-    private double thicknessMultiplier = 50;
-    private int fontSize = 12;
+    int neuronRadius = 30;
+    int fontSize = 16;
+    static int maxErrorRecording = 1000;
 
     //useables
     public static final Point screenSize = new Point();
 
     private Network n = new Network();
+
+    double notifbar;
     
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,19 +37,16 @@ public class NetworkDisplay extends AppCompatActivity {
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         vibrate = (Vibrator) getSystemService(VIBRATOR_SERVICE);
 
-        textPaint = new Paint();
-        textPaint.setColor(Color.BLACK);
-        textPaint.setTextSize(fontSize);
 
         Display display = getWindowManager().getDefaultDisplay();
         display.getSize(screenSize);
         int resId = getResources().getIdentifier("status_bar_height", "dimen",
                 "android");
+        notifbar = getResources().getDimensionPixelSize(resId);
+        ;
         if (resId > 0) {
-            screenSize.y -= getResources().getDimensionPixelSize(resId);
+            screenSize.y -= notifbar;
         }
-        //windowWidth = screenSize.x;
-        //windowHeight = screenSize.y;
 
 
         buttonslayout = findViewById(R.id.layout);
@@ -66,95 +62,134 @@ public class NetworkDisplay extends AppCompatActivity {
                 scheduleDrawable(getBackground(), redrawer, 33
                         /*Math.max (-(System.currentTimeMillis() - lastScreenUpdate - 16), 0)*/);
                 //(Math.max (-(System.currentTimeMillis () - time - 16), 0))
-                c.drawBitmap(bitmap720p, rect720p, thisRes, defaultPaint);
+
+
+                if (d != null) {
+                    //Bitmap tempBitmap = Bitmap.createBitmap(720, 1280,
+                    //        Bitmap.Config.ARGB_8888);
+                    //NetworkDisplay.this.c = new Canvas(tempBitmap);
+                    //d.draw();
+                    //bitmap720p = tempBitmap;
+//
+                    //c.drawBitmap(bitmap720p, rect720p, thisRes, defaultPaint);
+
+                    NetworkDisplay.this.c = c;
+                    d.draw();
+
+                    d.updateNetwork();
+                }
             }
         };//30 fps
         mainLayout.addView(v);
 
-        addButton("new training batch", new Action() {
-            public void thing() {
-                n.setQAArray();
-            }
-        });
-        addButton("train one batch", new Action() {
-            public void thing() {
-                n.runBatch();
-            }
-        });
-        addButton(">/II slow training", new Action() {
-            public void thing() {
-                if (stop) {
-                    stop = false;
-                    Thread tempThread = new Thread() {
-                        public void run() {
-                            long time = System.currentTimeMillis();
-                            while (!stop) {
-                                //n.runBatch();
-                                //try {
-                                //    Thread.sleep(30);
-                                //}
-                                //catch (Exception f){
-                                //    System.out.println ("sleeping failed");
-                                //}
+        d = new Drawer(n, this);
+        d.windowWidth = screenSize.x;//720
+        d.windowHeight = screenSize.y;//1280
 
-                                try {
-                                    Thread.sleep((int) (Math.max(-(System.currentTimeMillis() - time - 30), 0)));
-                                } catch (Exception g) {
-                                    System.out.println("um");
-                                }
-                                time = System.currentTimeMillis();
-                                n.runBatch();
-                            }
-                        }
-                    };
-                    tempThread.start();
+        textPaint = new Paint();
+        textPaint.setColor(Color.BLACK);
+        textPaint.setTextSize(fontSize);
 
-                } else
-                    stop = true;
-            }
-        });
+        halfred = Color.argb(122, 255, 0, 0);
+        halfblue = Color.argb(122, 0, 0, 255);
+        halfwhite = Color.argb(122, 255, 255, 255);
+        fullwhite = Color.argb(255, 255, 255, 255);
 
-        addButton(">/II fast training", new Action() {
-            public void thing() {
-                if (stop) {
-                    stop = false;
-                    Thread tempThread = new Thread() {
-                        public void run() {
-                            while (!stop) {
-                                n.runBatch();
-                            }
-                        }
-                    };
-                    tempThread.start();
-                } else
-                    stop = true;
-            }
-        });
-        addButton("lr * 2", new Action() {
-            public void thing() {
-                n.lr *= 2.0;
-            }
-        });
-        addButton("lr / 2", new Action() {
-            public void thing() {
-                n.lr /= 2.0;
-            }
-        });
-        addButton("update network", new Action() {
-            public void thing() {
-                updateNetwork = true;
-            }
-        });
+        painter = new Paint();
 
-        halfred.setARGB(122, 255, 0, 0);
-        halfblue.setARGB(122, 0, 0, 255);
-        halfwhite.setARGB(122, 255, 255, 255);
-        black.setARGB(255, 0, 0, 0);
-        black.setStrokeWidth(1);
+        String in = Data.getData("prevnumbatches", "0");
+        what = in;
     }
 
+    String what;
+
+    Paint painter;
+    private Paint textPaint;
+
+    int halfred;
+    int halfblue;
+    int halfwhite;
+    int fullwhite;
+
+    //double thicknessMultiplier = 50;
+
+    void setStroke(double value) {
+        painter.setStrokeWidth((float) value * 7f);
+    }
+
+    void setColor(int c) {
+        painter.setColor(c);
+    }
+
+    void setColor(int a, int r, int g, int b) {
+        painter.setColor(Color.argb(a, r, g, b));
+    }
+
+    void drawRect(int x, int y, int width, int height) {
+        c.drawRect(x, y, x + width, y + height, painter);
+    }
+
+    void drawOval(int x, int y, int diameter1, int diameter2) {
+        c.drawOval(x, y, x + diameter1, y + diameter2, painter);
+    }
+
+    void drawLine(int x1, int y1, int x2, int y2) {
+        c.drawLine(x1, y1, x2, y2, painter);
+    }
+
+    void drawString(String text, double x, double y, String position, int bg) {
+        Rect bounds = new Rect();
+        textPaint.getTextBounds(text, 0, text.length(), bounds);
+        double width = bounds.right - bounds.left;
+        double height = bounds.bottom - bounds.top;//well, it works
+        switch (position) {
+            case "topleft":
+                y += height;
+                break;
+            case "topright":
+                y += height;
+                x -= width;
+                break;
+            case "topmiddle":
+                y += height;
+                x -= width / 2.0;
+                break;
+            case "bottomleft":
+                break;
+            case "middleleft":
+                y += height / 2.0;
+                break;
+            case "bottomright":
+                x -= width;
+                break;
+            case "middleright":
+                y += height / 2.0;
+                x -= width;
+                break;
+            case "bottommiddle":
+                x -= width / 2.0;
+                break;
+            case "middle":
+                y += height / 2.0;
+                x -= width / 2.0;
+                break;
+        }
+        int currentPaint = painter.getColor();
+        painter.setColor(bg);
+        c.drawRect((float) x, (float) (y - height), (float) (x + width), (float) y, painter);
+        c.drawText(text, (float) x, (float) y, textPaint);
+        //c.drawText (bounds.left + ", " + bounds.top + ", " + bounds.right + ", " + bounds.bottom, (float)x, (float)y, textPaint);
+        //c.drawText (width + ", " + height, (float)x, (float)y + fontSize, textPaint);
+        painter.setColor(currentPaint);
+    }
+
+    void drawDouble(double text, int x, int y, String pos, int paint) {
+        drawString((Math.round(text * 1000.0) / 1000.0) + "", x, y, pos, paint);
+    }
+
+
     //should work for even and odd numbers of buttons
-    private void setButtonPositions() {//needs to prioritize putting buttons near beginning for non-whole number fitting into rows
+    public void setButtonPositions() {//needs to prioritize putting buttons near beginning for non-whole number fitting into rows
         //int number = buttonslayout.getChildCount();
 
         //int buttonWidth = windowWidth / (number + (number%2 == 1?1:0)) * buttonrows;
@@ -165,47 +200,31 @@ public class NetworkDisplay extends AppCompatActivity {
         //    }
     }
 
-    int windowWidth = 720;
-    int windowHeight = 1280;
-
-    Paint halfred = new Paint();
-    Paint halfblue = new Paint();
-    Paint halfwhite = new Paint();
-    Paint black = new Paint();
 
     private boolean updateNetwork = true;
 
     private boolean stop = true;
 
-    private boolean stopUpdater = false;
-    Thread updater = (new Thread() {
-        long time = System.currentTimeMillis();
+    Drawer d;
 
-        @Override
-        public void run() {
-            while (!stopUpdater) {
-                process();
-                try {
-                    Thread.sleep((int) (Math.max(-(System.currentTimeMillis() - time - 16), 0)));
-                } catch (Exception e) {
-                    System.out.println("um");
-                }
-                time = System.currentTimeMillis();
-            }
-        }
-    });
+    Canvas c;
 
     @Override
     public void onPause() {
         super.onPause();
-        stopUpdater = true;
+        //stopUpdater = true;
     }
-
     @Override
     public void onResume() {
         super.onResume();
-        stopUpdater = false;
-        updater.start();
+        //stopUpdater = false;
+        //updater.start();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        Data.putData("prevnumbatches", n.batchesRun + "");
     }
 
     private LinearLayout buttonslayout;
@@ -221,7 +240,7 @@ public class NetworkDisplay extends AppCompatActivity {
                 action.thing();
             }
         });
-        b.setTextSize(5);
+        b.setTextSize(8);
         buttonslayout.addView(b);
     }
 
@@ -242,34 +261,41 @@ public class NetworkDisplay extends AppCompatActivity {
             v.invalidate();
         }
     };
-    private Bitmap bitmap720p = Bitmap.createBitmap(720, 1280,
-            Bitmap.Config.ARGB_8888);
-    public void process() {
+    //private Bitmap bitmap720p = Bitmap.createBitmap(720, 1280, Bitmap.Config.ARGB_8888);
+
+    @Override
+    public boolean onTouchEvent(MotionEvent e) {
+        double x = e.getX();///screenSize.x * 720.0;
+        double y = e.getY() - notifbar;///screenSize.y*1280.0;
+        //System.out.println (e.toString());
+        switch (e.getAction()) {
+            case MotionEvent.ACTION_MOVE:
+                break;
+            case MotionEvent.ACTION_UP:
+                d.userClicked((int) x, (int) y);
+                return true;
+        }
+        return false;
+    }
+
+    /*public void process() {
         Bitmap tempBitmap = Bitmap.createBitmap(720, 1280,
                 Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(tempBitmap);
 
-        {
-            if (updateNetwork) {
-                updateNetwork();
-            }
+        //ArrayList<String> displayText = new ArrayList<>();
 
-            //drawString("topleft", 0, 0, c, Pos.TOP_LEFT);
-            //drawString("topcenter", 360, 0, c, Pos.TOP_CENTER);
-            //drawString("topright", 720, 0, c, Pos.TOP_RIGHT);
-//
-            //drawString("middleleft", 0, 640, c, Pos.CENTER_LEFT);
-            //drawString("poop", 360, 640, c, Pos.CENTER_CENTER);
-            //drawString("middleright", 720, 640, c, Pos.CENTER_RIGHT);
-//
-            //drawString("bottomleft", 0, 1280, c, Pos.BOTTOM_LEFT);
-            //drawString ("bottommiddle", 360, 1280, c, Pos.BOTTOM_CENTER);
-            //drawString("bottomright", 720, 1280, c, Pos.BOTTOM_RIGHT);
+        {
+            //should use draw methods instead to make switching between desktop and mobile easier
+            //eg. implements NetworkDrawer or some shit.
+            //also for buttons with methods.
+
+
+            if (updateNetwork)
+                updateNetwork();
 
             try {
-                displayText = new ArrayList();
-
-                int errorGraphWidth = windowWidth * 7 / 10;
+                int errorGraphWidth = n.maxErrorRecording;
 
                 double max = 0;
                 double min = Double.MAX_VALUE / 2.0;
@@ -285,11 +311,13 @@ public class NetworkDisplay extends AppCompatActivity {
                         int xPos = left + (int) (1.0 * x * errorGraphWidth / n.errors.size());
                         try {
                             int yPos = (int) (((max - min) - (n.errors.get(x) - min)) * 100 / (max - min));
-                            c.drawRect(xPos, yPos, xPos + 1, yPos + 1, black);
+                            c.drawRect(xPos-1, yPos-1, xPos + 1, yPos + 1, black);
                         } catch (Exception f) {
+                            f.printStackTrace();
                         }
                     }
                 } catch (Exception e) {
+                    e.printStackTrace();
                 }
                 c.drawLine(left - 1, 0, left - 1, 101, black);
                 c.drawLine(left - 1, 101, left + errorGraphWidth, 101, black);
@@ -338,18 +366,21 @@ public class NetworkDisplay extends AppCompatActivity {
                         XY thisNeuron = positions.get(x).get(y);
                         Neuron neuron = layers.get(x).get(y);
 
+                        float extra;
                         double bias = neuron.bias;
                         if (bias > 0) {
-                            tempPaint.setStrokeWidth((float) Math.sqrt(bias * thicknessMultiplier));
+                            //tempPaint.setStrokeWidth((float) Math.sqrt(bias * thicknessMultiplier));
+                            extra = (float) Math.sqrt(bias * thicknessMultiplier);
                             tempPaint.setColor(halfblue.getColor());
                         } else {
-                            tempPaint.setStrokeWidth((float) Math.sqrt(bias * -thicknessMultiplier));
+                            //tempPaint.setStrokeWidth((float) Math.sqrt(bias * -thicknessMultiplier));
+                            extra = (float) Math.sqrt(bias * -thicknessMultiplier);
                             tempPaint.setColor(halfred.getColor());
                         }
-                        c.drawOval(thisNeuron.x - neuronRadius,
-                                thisNeuron.y - neuronRadius,
-                                thisNeuron.x - neuronRadius + neuronRadius * 2,
-                                thisNeuron.y - neuronRadius + neuronRadius * 2, tempPaint);
+                        c.drawOval(thisNeuron.x - neuronRadius - extra,
+                                thisNeuron.y - neuronRadius - extra,
+                                thisNeuron.x + neuronRadius + extra,
+                                thisNeuron.y + neuronRadius + extra, tempPaint);
                         drawDouble(neuron.value, thisNeuron.x, thisNeuron.y, c, Pos.CENTER_CENTER);
                         drawDouble(bias, thisNeuron.x, thisNeuron.y + neuronRadius + 10, c, Pos.CENTER_CENTER);
                     }
@@ -373,20 +404,9 @@ public class NetworkDisplay extends AppCompatActivity {
                 left = windowWidth - dataSquareSide;
                 int top = windowHeight / 2 - dataSquareSide / 2;
 
-                double[] maxes = new double[n.thisBatchPoints.get(0).length];
-                double[] mins = new double[n.thisBatchPoints.get(0).length];
+                double[] maxes = n.inMaxes;
+                double[] mins = n.inMins;
 
-                Arrays.fill(maxes, Double.MIN_VALUE / 2.0);
-                Arrays.fill(mins, Double.MAX_VALUE / 2.0);
-
-                for (int x = 0; x < n.thisBatchPoints.size(); x++) {
-                    for (int y = 0; y < n.thisBatchPoints.get(0).length; y++) {
-                        if (n.thisBatchPoints.get(x)[y] > maxes[y])
-                            maxes[y] = n.thisBatchPoints.get(x)[y];
-                        if (n.thisBatchPoints.get(x)[y] < mins[y])
-                            mins[y] = n.thisBatchPoints.get(x)[y];
-                    }
-                }
                 //displayText.add (maxes[0]+" " + mins[0]);
                 //displayText.add (maxes[1]+" " + mins[1]);
                 //displayText.add (maxes[2]+" " + mins[2]);
@@ -422,9 +442,11 @@ public class NetworkDisplay extends AppCompatActivity {
                             tempPaint.setARGB(255, 0, 0, color);
                         tempPaint.setStrokeWidth(1);
 
-                        c.drawRect(xPosition, yPosition, xPosition + 1, yPosition + 1, tempPaint);
+                        c.drawRect(xPosition-1, yPosition-1, xPosition + 1, yPosition + 1, tempPaint);
                     }
                 }
+
+                displayText.add ("test case: " + n.testCase);
 
                 displayText.add("lr: " + n.lr);
 
@@ -434,13 +456,13 @@ public class NetworkDisplay extends AppCompatActivity {
                 //e.printStackTrace();
             }
             
-            
+
         }
         bitmap720p = tempBitmap;
-    }
+    }*/
 
-    ArrayList<ArrayList<Neuron>> layers = new ArrayList();
-    ArrayList<ArrayList<XY>> positions = new ArrayList();
+    /*ArrayList<ArrayList<Neuron>> layers = new ArrayList<>();
+    ArrayList<ArrayList<XY>> positions = new ArrayList<>();
 
     private XY getPosition(Neuron n) {
         for (int x = 0; x < layers.size(); x++) {
@@ -450,20 +472,20 @@ public class NetworkDisplay extends AppCompatActivity {
             }
         }
         System.out.println("neuron not found");
-        return null;
-    }
+        return new XY (-1, -1);
+    }*/
 
-    private boolean working = false;
+    //private boolean working = false;
 
-    public void updateNetwork() {
+    /*public void updateNetwork() {
         if (updateNetwork && !working) {
             updateNetwork = false;
             working = true;
             ArrayList<Neuron> neurons = n.neurons;
-            layers = new ArrayList<ArrayList<Neuron>>();
+            layers = new ArrayList<>();
             layers.add(new ArrayList<Neuron>());
             for (int x = 0; x < neurons.size(); x++) {
-                //boolean incrementLayer = false;
+                //boolean incrementLayer = false; //idk
                 for (int y = 0; y < neurons.get(x).inputs.size(); y++) {
                     for (int z = 0; z < layers.get(layers.size() - 1).size(); z++) {
                         if (neurons.get(x).inputs.get(y).n1 == layers.get(layers.size() - 1).get(z))
@@ -475,10 +497,10 @@ public class NetworkDisplay extends AppCompatActivity {
 
             int width = layers.size();
 
-            positions = new ArrayList();
+            positions = new ArrayList<>();
             for (int x = 0; x < layers.size(); x++) {
                 int nneurons = layers.get(x).size();
-                positions.add(new ArrayList());
+                positions.add(new ArrayList<XY>());
                 for (int y = 0; y < nneurons; y++) {
                     positions.get(x).add(new XY((int) (windowWidth * (x + 0.5) / (width + 1)), windowHeight * (y + 2) / (nneurons + 3)));
 
@@ -491,60 +513,9 @@ public class NetworkDisplay extends AppCompatActivity {
 
             working = false;
         }
-    }
+    }*/
 
-    private ArrayList<String> displayText = new ArrayList();
 
-    private Paint textPaint;
-
-    private enum Pos {
-        TOP_LEFT, BOTTOM_LEFT, TOP_RIGHT, BOTTOM_RIGHT, TOP_CENTER, BOTTOM_CENTER, CENTER_RIGHT, CENTER_LEFT, CENTER_CENTER
-    }
-    private void drawString(String text, double x, double y, Canvas c, Pos pos) {
-        Rect bounds = new Rect();
-        textPaint.getTextBounds(text, 0, text.length(), bounds);
-        double width = bounds.right - bounds.left;
-        double height = bounds.bottom - bounds.top;//well, it works
-        switch (pos) {
-            case TOP_LEFT:
-                y += height;
-                break;
-            case TOP_RIGHT:
-                y += height;
-                x -= width;
-                break;
-            case TOP_CENTER:
-                y += height;
-                x -= width / 2.0;
-                break;
-            case BOTTOM_LEFT:
-                break;
-            case CENTER_LEFT:
-                y += height / 2.0;
-                break;
-            case BOTTOM_RIGHT:
-                x -= width;
-                break;
-            case CENTER_RIGHT:
-                y += height / 2.0;
-                x -= width;
-                break;
-            case BOTTOM_CENTER:
-                x -= width / 2.0;
-                break;
-            case CENTER_CENTER:
-                y += height / 2.0;
-                x -= width / 2.0;
-                break;
-        }
-        c.drawText(text, (float) x, (float) y, textPaint);
-        //c.drawText (bounds.left + ", " + bounds.top + ", " + bounds.right + ", " + bounds.bottom, (float)x, (float)y, textPaint);
-        //c.drawText (width + ", " + height, (float)x, (float)y + fontSize, textPaint);
-    }
-
-    private void drawDouble(double text, int x, int y, Canvas c, Pos pos) {
-        drawString((Math.round(text * 1000.0) / 1000.0) + "", x, y, c, pos);
-    }
 
     //Thread thread = new Thread (){
     //    long time = System.currentTimeMillis();

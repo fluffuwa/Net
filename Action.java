@@ -1,7 +1,5 @@
 package com.example.joeym.playground;
 
-public interface Action {
-
-    void thing();
-
+public abstract class Action {
+    abstract void thing();
 }

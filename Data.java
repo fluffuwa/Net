@@ -1,8 +1,10 @@
 package com.example.joeym.playground;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.PrintWriter;
 
 public class Data {
@@ -12,27 +14,27 @@ public class Data {
             p.write(data);
             p.close();
         } catch (Exception e) {
+            e.printStackTrace();
         }
     }
-
-    public static String getData(String name) {
+    public static String getData(String name, String defaultData) {
+        String data = null;
         try {
             BufferedReader b = new BufferedReader(new FileReader(name));
-            String temp = "";
+            data = "";
             while (b.ready()) {
-                temp += b.readLine();
+                data += b.readLine();
             }
             b.close();
-            return temp;
-        } catch (Exception e) {
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException f) {
+            f.printStackTrace();
         }
-        return null;
-    }
-
-    public static String getData(String name, String defaultData) {
-        String data = getData(name);
-        if (data == null)
+        if (data == null) {
+            putData(name, defaultData);
             return defaultData;
+        }
         return data;
     }
 }
