@@ -8,13 +8,13 @@ public class Network {//maybe wants some way to link multiple neurons together? 
 
 
     int testCase = QA.maxQA;
-    int[] hiddenLayerSizes = {5, 2};
+    int[] hiddenLayerSizes = {8, 7};
 
     int batchSize = 1000;
 
     int maxErrorRecording = NetworkDisplay.maxErrorRecording;
 
-    double lr = 0.05;
+    double lr = 0.1;
 
     public Network() {
 
@@ -232,54 +232,50 @@ public class Network {//maybe wants some way to link multiple neurons together? 
     public void sortNeurons() {
         ///shrug
         //error if it goes cyclic
-        try {
-            boolean changed;
-            int count = 0;
 
-            //printList (neurons);
-            do {
-                changed = false;
-                count++;
+        boolean changed;
+        int count = 0;
 
-                ArrayList<Neuron> neuronsClone = (ArrayList<Neuron>) neurons.clone();
-                for (int n = 0; n < neuronsClone.size(); n++) {
-                    //push all inputs to left, all outputs to right
-                    Neuron center = neuronsClone.get(n);
+        //printList (neurons);
+        do {
+            changed = false;
+            count++;
 
-                    ArrayList<Weight> inputsClone = (ArrayList<Weight>) center.inputs.clone();
-                    for (int x = 0; x < inputsClone.size(); x++) {
-                        Weight w = inputsClone.get(x);
-                        int pos = getNeuronPos(center);
-                        if (getNeuronPos(w.n1) > pos) {
-                            neurons.remove(w.n1);
-                            neurons.add(pos, w.n1);
-                            changed = true;
-                            printList(neurons);
-                        }
+            ArrayList<Neuron> neuronsClone = (ArrayList<Neuron>) neurons.clone();
+            for (int n = 0; n < neuronsClone.size(); n++) {
+                //push all inputs to left, all outputs to right
+                Neuron center = neuronsClone.get(n);
+
+                ArrayList<Weight> inputsClone = (ArrayList<Weight>) center.inputs.clone();
+                for (int x = 0; x < inputsClone.size(); x++) {
+                    Weight w = inputsClone.get(x);
+                    int pos = getNeuronPos(center);
+                    if (getNeuronPos(w.n1) > pos) {
+                        neurons.remove(w.n1);
+                        neurons.add(pos, w.n1);
+                        changed = true;
+                        printList(neurons);
                     }
-
-                    ArrayList<Weight> outputsClone = (ArrayList<Weight>) center.outputs.clone();
-                    for (int x = 0; x < outputsClone.size(); x++) {
-                        Weight w = outputsClone.get(x);
-                        int pos = getNeuronPos(center);
-                        if (getNeuronPos(w.n2) < pos) {
-                            neurons.remove(w.n2);
-                            neurons.add(pos, w.n2);
-                            changed = true;
-                            printList(neurons);
-                        }
-                    }
-
                 }
 
-            } while (changed && count < neurons.size() + 1);
+                ArrayList<Weight> outputsClone = (ArrayList<Weight>) center.outputs.clone();
+                for (int x = 0; x < outputsClone.size(); x++) {
+                    Weight w = outputsClone.get(x);
+                    int pos = getNeuronPos(center);
+                    if (getNeuronPos(w.n2) < pos) {
+                        neurons.remove(w.n2);
+                        neurons.add(pos, w.n2);
+                        changed = true;
+                        printList(neurons);
+                    }
+                }
 
-            if (count >= neurons.size() + 1)
-                System.out.println("not sorted");
-        } catch (Exception e) {
-            setQAArray();
-            setNetworkForQA();
-        }
+            }
+
+        } while (changed && count < neurons.size() + 1);
+
+        if (count >= neurons.size() + 1)
+            System.out.println("not sorted");
     }
 
     public int getNeuronPos(Neuron n) {

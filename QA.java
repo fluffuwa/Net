@@ -127,6 +127,20 @@ public class QA {
                         (realInputs[1] < 0.25 || realInputs[1] > 0.75) ? 1 : 0
                 ) : 0;
                 break;
+            case 18:
+                initialize(2, 1);
+                double k = realInputs[0] * 100;
+                double l = realInputs[1] * 100;
+                realOutputs[0] = (Math.sqrt((k - 62.5) * (k - 62.5) + (l - 62.5) * (l - 62.5)) > 37.5 != Math.sqrt((k - 25) * (k - 25) + (l - 25) * (l - 25)) > 12.5) ? 1 : 0;
+                break;
+            case 19:
+                initialize(2, 5);
+                realOutputs[0] = realInputs[0];
+                realOutputs[1] = realInputs[0] + realInputs[1];
+                realOutputs[2] = realInputs[0] * realInputs[1];
+                realOutputs[3] = realInputs[0] - realInputs[1];
+                realOutputs[4] = Math.sqrt((realInputs[0] - 0.5) * (realInputs[0] - 0.5) + (realInputs[1] - 0.5) * (realInputs[1] - 0.5)) > 0.25 ? 1 : 0;
+                break;
             default://funky town
                 System.out.println("QA " + test + " not found.");
                 int[] twoones = {3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16};
@@ -142,7 +156,7 @@ public class QA {
 
     }
 
-    static int maxQA = 17;
+    static int maxQA = 19;
 
     public void initialize(int size1, int size2) {
         realInputs = new double[size1];
